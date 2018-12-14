@@ -54,7 +54,7 @@ steps:
 
   - name: build-client-app
     image: golang:alpine
-    commands: ["cd ./ci/scripts/build.sh"]
+    commands: ["./ci/scripts/build.sh"]
     environment:
       MAIN_DIR: ./server
     volumes:
