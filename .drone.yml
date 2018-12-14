@@ -72,7 +72,7 @@ steps:
         from_secret: k8s_token
       STAGING: true
       TAG: ${DRONE_COMMIT_SHA:0:8}
-    depends_on: [build-client-image, build-server-image]
+    depends_on: [build-client, build-server]
 
 depends_on:
   - test
