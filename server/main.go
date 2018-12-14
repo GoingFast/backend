@@ -25,7 +25,7 @@ func fallbackEnv(env, fallback string) string {
 func (s service) Message(ctx context.Context, _ *empty.Empty) (*pb.MessageResponse, error) {
 	return &pb.MessageResponse{
 		ServerHostname: fallbackEnv("HOSTNAME", "hostname"),
-		Title:          "messa1",
+		Title:          "messasda1fff",
 		Version:        fallbackEnv("VERSION", "version"),
 	}, nil
 }
