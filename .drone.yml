@@ -1,4 +1,23 @@
 ---
+kind: secret
+
+external_data:
+  docker_username:
+    path: secret/ci
+    name: docker_username
+  docker_password:
+    path: secret/ci
+    name: docker_password
+  k8s_apiserver_addr:
+    path: secret/ci
+    name: k8s_apiserver_addr
+  k8s_ca:
+    path: secret/ci
+    name: k8s_ca
+  k8s_token:
+    path: secret/ci
+    name: k8s_token
+---
 kind: pipeline
 name: staging-test
 
