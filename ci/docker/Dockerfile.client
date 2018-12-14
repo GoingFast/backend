@@ -1,0 +1,9 @@
+FROM golang:alpine as builder
+RUN apk add git
+COPY . /backend
+WORKDIR /backend/client
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -ldflags="-w -s" -o binary -mod=vendor
+
+FROM alpine
+COPY --from=builder /backend/client/binary .
+ENTRYPOINT ["./binary"]

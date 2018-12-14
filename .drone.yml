@@ -1,0 +1,137 @@
+---
+kind: pipeline
+name: staging-test
+
+steps:
+  - name: tests
+    image: golang:alpine
+    commands: ["CGO_ENABLED=0 go test ./... -mod=vendor"]
+
+trigger:
+  event:
+    - push
+  branch:
+    - staging
+
+---
+kind: pipeline
+name: staging-deploy
+
+volumes:
+  - name: cache_server
+    temp: {}
+  - name: cache_client
+    temp: {}
+
+steps:
+  - name: build-server-app
+    image: golang:alpine
+    commands: ["./ci/scripts/build.sh"]
+    environment:
+      MAIN_DIR: ./server
+    volumes:
+      - name: cache_server
+        path: /drone/src/binary
+
+  - name: build-client-app
+    image: golang:alpine
+    commands: ["cd ./ci/scripts/build.sh"]
+    environment:
+      MAIN_DIR: ./server
+    volumes:
+      - name: cache_client
+        path: /drone/src/binary
+
+  - name: build-client-image
+    image: plugins/docker
+    settings:
+      repo: risla8/backend-client
+      tags: ${DRONE_COMMIT_SHA:0:8}
+      dockerfile: ./ci/docker/Dockerfile.client
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    volumes:
+      - name: cache_client
+        path: /drone/src/binary
+    depends_on: [build-server-app, build-client-app]
+
+  - name: build-server-image
+    image: plugins/docker
+    settings:
+      repo: risla8/backend-server
+      tags: ${DRONE_COMMIT_SHA:0:8}
+      dockerfile: ./ci/docker/Dockerfile.server
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    volumes:
+      - name: cache_server
+        path: /drone/src/binary
+    depends_on: [build-server-app, build-client-app]
+
+  - name: deploy
+    image: dtzar/helm-kubectl:2.11.0
+    commands: ["apk add grep", "cd ./ci/scripts && ./deploy.sh"]
+    environment:
+      APISERVER_ADDR:
+        from_secret: k8s_apiserver_addr
+      HELM_INSTALL: backend
+      CA:
+        from_secret: k8s_ca
+      TOKEN:
+        from_secret: k8s_token
+      STAGING: true
+      TAG: ${DRONE_COMMIT_SHA:0:8}
+    depends_on: [build-server-app, build-client-app, build-client-image, build-server-image]
+
+depends_on:
+  - staging-test
+
+trigger:
+  event:
+    - push
+  branch:
+    - staging
+  status:
+    - success
+        
+---
+kind: pipeline
+name: pr
+
+steps:
+  - name: test
+    image: golang:alpine
+    commands: ["CGO_ENABLED=0 go test ./... -mod=vendor"]
+
+trigger:
+  event:
+    - pull_request
+
+---
+kind: pipeline
+name: master
+
+steps:
+  - name: switch-environments
+    image: dtzar/helm-kubectl:2.11.0
+    commands: ["apk add grep", "cd ./ci/scripts && ./deploy.sh"]
+    environment:
+      APISERVER_ADDR:
+        from_secret: k8s_apiserver_addr
+      CA:
+        from_secret: k8s_ca
+      TOKEN:
+        from_secret: k8s_token
+      HELM_INSTALL: backend
+      TAG: ${DRONE_COMMIT_SHA:0:8}
+      SWITCH: true
+
+trigger:
+  event:
+    - push
+  branch:
+    - master

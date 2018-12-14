@@ -1,0 +1,34 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-client
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  tls:
+    - secretName: backend-certs
+      hosts:
+        - {{ .Values.ingress.client.prod.host }}
+        - {{ .Values.ingress.client.staging.host }}
+  rules:
+    - host: {{ .Values.ingress.client.prod.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.client.prod.path }}
+            backend:
+              serviceName: {{ .Release.Name }}-client-{{ .Values.deployment.prod }}
+              servicePort: 8081
+    - host: {{ .Values.ingress.client.staging.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.client.staging.path }}
+            backend:
+              serviceName: {{ .Release.Name }}-client-{{ .Values.deployment.staging }}
+              servicePort: 8081

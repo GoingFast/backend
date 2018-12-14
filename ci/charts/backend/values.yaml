@@ -1,0 +1,54 @@
+# Default values for backend.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deployment:
+  blue:
+    enabled: true
+    replicaCount: 2
+    server:
+      image:
+        repository: risla8/backend-server
+        tag: 2
+    client:
+      image:
+        repository: risla8/backend-client
+        tag: latest
+  green:
+    enabled: false
+    replicaCount: 1
+    server:
+      image:
+        repository: risla8/backend-server
+        tag: 2
+    client:
+      image:
+        repository: risla8/backend-client
+        tag: latest
+
+  prod: blue
+  staging: green
+
+ingress:
+  tlsSecretName: backend-certs
+  server:
+    prod:
+      host: blue.server.172.28.128.4.xip.io
+      path: /
+    staging:
+      host: green.server.172.28.128.4.xip.io
+      path: /
+  client:
+    prod:
+      host: api.172.28.128.4.xip.io
+      path: /
+    staging:
+      host: staging.api.172.28.128.4.xip.io
+      path: /
+
+certs:
+  vaultAddr: https://vault.secrets:8200
+  vaultPath: pki_int/sign/certs
+
+nameOverride: ""
+fullnameOverride: ""

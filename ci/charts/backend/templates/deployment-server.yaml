@@ -1,0 +1,92 @@
+{{- if .Values.deployment.blue.enabled }}
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.deployment.blue.server.image.tag}}-server-blue
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  {{- if eq .Values.deployment.prod "blue" }}
+  replicas: {{ .Values.deployment.blue.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "backend.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "backend.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        track: blue
+        service: server
+    spec:
+      volumes:
+        - name: tls
+          secret:
+            secretName: backend-certs
+      containers:
+        - name: {{ .Release.Name }}-{{ .Values.deployment.blue.version}}-server-blue
+          image: "{{ .Values.deployment.blue.server.image.repository }}:{{ .Values.deployment.blue.server.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/certs
+          # env:
+          #   - name: TLS
+          #     value: "1"
+{{- end }}
+{{- if .Values.deployment.green.enabled }}
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.deployment.green.server.image.tag}}-server-green
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  {{- if eq .Values.deployment.prod "green" }}
+  replicas: {{ .Values.deployment.green.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "backend.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "backend.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        track: green
+        service: server
+    spec:
+      volumes:
+        - name: tls
+          secret:
+            secretName: backend-certs
+      containers:
+        - name: {{ .Release.Name }}
+          image: "{{ .Values.deployment.green.server.image.repository }}:{{ .Values.deployment.green.server.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/certs
+          # env:
+          #   - name: TLS
+          #     value: "1"
+{{- end }}

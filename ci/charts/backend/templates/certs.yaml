@@ -1,0 +1,146 @@
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-vault-renewer
+  namespacE: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "backend.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "backend.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      volumes:
+        - name: vault-certs
+          secret:
+            secretName: vault
+      serviceAccountName: certs
+      containers:
+        - name: renewer
+          image: risla8/vault-helper:2
+          imagePullPolicy: IfNotPresent
+          args: ["-tokenrenew", "-tokensave"]
+          env:
+            - name: VAULTHELPER_KUBERNETES_ROLE
+              value: certs
+            - name: VAULTHELPER_APPROLE
+              value: certs
+            - name: VAULTHELPER_VAULT_SCHEMA
+              value: https
+            - name: VAULTHELPER_VAULT_ADDR
+              value: vault.secrets:8200
+          volumeMounts:
+            - name: vault-certs
+              mountPath: /etc/certs
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: certs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: certs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+rules:
+  - apiGroups:
+    - authentication.k8s.io
+    resources:
+    - tokenreviews
+    - subjectaccessreviews
+    verbs:
+    - "create"
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - "create"
+    - "patch"
+    - "delete"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: certs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: certs
+subjects:
+  - kind: ServiceAccount
+    name: certs
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  vault:
+    auth:
+      tokenSecretRef:
+        name: certs-vault-token
+        key: token
+    path: {{ .Values.certs.vaultPath }}
+    server: {{ .Values.certs.vaultAddr }}
+    
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "backend.name" . }}
+    helm.sh/chart: {{ include "backend.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  secretName: {{ .Values.ingress.tlsSecretName }}
+  issuerRef:
+    name: vault-issuer
+  commonName: xip.io
+  dnsNames:
+    - {{ .Values.ingress.server.prod.host }}
+    - {{ .Values.ingress.client.prod.host }}
+    - {{ .Values.ingress.client.staging.host }}
+    - {{ .Values.ingress.server.staging.host }}

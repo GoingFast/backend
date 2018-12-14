@@ -1,0 +1,12 @@
+FROM golang:alpine as builder
+RUN apk add curl
+COPY . /backend
+WORKDIR /backend/server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -ldflags="-w -s" -o binary -mod=vendor
+RUN curl -L https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.2.0/grpc_health_probe-linux-amd64 -o grpc-health-probe
+
+FROM alpine
+COPY --from=builder /backend/server/binary .
+COPY --from=builder /backend/server/grpc-health-probe /usr/local/bin
+RUN chmod a+x /usr/local/bin/grpc-health-probe
+ENTRYPOINT ["./binary"]

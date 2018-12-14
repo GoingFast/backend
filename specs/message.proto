@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package message;
+
+service MessageService {
+  rpc Message(google.protobuf.Empty) returns (MessageResponse) {};
+};
+
+message MessageResponse {
+  string serverHostname = 1;
+  string clientHostname = 2;
+  string title = 3;
+  string version = 4;
+};

@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: renewer
+  namespace: cicd
+spec:
+  template:
+    metadata:
+      labels:
+        app: renewer
+    spec:
+      volumes:
+        - name: secrets
+          emptyDir: {}
+        - name: vault
+          secret:
+            secretName: vault
+      serviceAccountName: drone
+      initContainers:
+        - name: renewer
+          image: risla8/vault-helper:7
+          args:
+            - "-initcontainer"
+            - "-tokensavefile"
+            - "-kubernetesrole=drone"
+            - "-approle=drone"
+            - "-vaultaddr=vault.secrets:8200"
+            - "-vaultschema=https"
+          # env:
+          #   - name: SECRET_docker_username
+          #     value: secret/ci
+          #   - name: SECRET_docker_password
+          #     value: secret/ci
+          volumeMounts:
+            - name: secrets
+              mountPath: /etc/vault
+            - name: vault
+              mountPath: /etc/certs
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          volumeMounts:
+            - name: secrets
+              mountPath: /etc/vault
