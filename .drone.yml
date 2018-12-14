@@ -19,7 +19,7 @@ external_data:
     name: k8s_token
 ---
 kind: pipeline
-name: staging-test
+name: test
 
 steps:
   - name: tests
@@ -34,34 +34,10 @@ trigger:
 
 ---
 kind: pipeline
-name: staging-deploy
-
-volumes:
-  - name: cache_server
-    temp: {}
-  - name: cache_client
-    temp: {}
+name: staging
 
 steps:
-  # - name: build-server-app
-  #   image: golang:alpine
-  #   commands: ["./ci/scripts/build.sh"]
-  #   environment:
-  #     MAIN_DIR: ./server
-  #   volumes:
-  #     - name: cache_server
-  #       path: /drone/src/binary
-
-  # - name: build-client-app
-  #   image: golang:alpine
-  #   commands: ["./ci/scripts/build.sh"]
-  #   environment:
-  #     MAIN_DIR: ./client
-  #   volumes:
-  #     - name: cache_client
-  #       path: /drone/src/binary
-
-  - name: build-client-image
+  - name: build-client
     image: plugins/docker
     settings:
       repo: risla8/backend-client
@@ -71,12 +47,8 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
-    volumes:
-      - name: cache_client
-        path: /drone/src/binary
-    # depends_on: [build-server-app, build-client-app]
 
-  - name: build-server-image
+  - name: build-server
     image: plugins/docker
     settings:
       repo: risla8/backend-server
@@ -86,10 +58,6 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
-    volumes:
-      - name: cache_server
-        path: /drone/src/binary
-    # depends_on: [build-server-app, build-client-app]
 
   - name: deploy
     image: dtzar/helm-kubectl:2.11.0
@@ -107,7 +75,7 @@ steps:
     depends_on: [build-client-image, build-server-image]
 
 depends_on:
-  - staging-test
+  - test
 
 trigger:
   event:

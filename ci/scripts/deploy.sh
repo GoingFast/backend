@@ -35,18 +35,18 @@ setup_kube() {
 staging() {
     productionColor=$(helm get values --all "$HELM_INSTALL" | grep -Po "prod: \K.*" )
     stagingColor=$(helm get values --all "$HELM_INSTALL" | grep -Po 'staging: \K.*')
-    printf "Staging: %s\\nProduction: %s" "$stagingColor\n" "$productionColor"
+    printf "Staging: %s\\nProduction: %s" "$stagingColor\\n" "$productionColor"
 
-    cd "$(git rev-parse --show-toplevel)/charts/$HELM_INSTALL"
+    cd "$(git rev-parse --show-toplevel)/ci/charts/$HELM_INSTALL"
     helm upgrade --install $HELM_INSTALL . --reuse-values -f env.yaml --set "deployment.$stagingColor.enabled=true" --set "deployment.$stagingColor.client.image.tag=$TAG" --set "deployment.$stagingColor.server.image.tag=$TAG" "$ADDITIONAL_STAGING_ARGS"
 }
 
 switch() {
     productionColor=$(helm get values --all "$HELM_INSTALL" | grep -Po "prod: \K.*" )
     stagingColor=$(helm get values --all "$HELM_INSTALL" | grep -Po 'staging: \K.*')
-    printf "Staging: %s\nProduction: %s" "$stagingColor\n" "$productionColor"
+    printf "Staging: %s\\nProduction: %s" "$stagingColor\\n" "$productionColor"
 
-    cd "$(git rev-parse --show-toplevel)/charts/$HELM_INSTALL"
+    cd "$(git rev-parse --show-toplevel)/ci/charts/$HELM_INSTALL"
     helm upgrade --install $HELM_INSTALL . --reuse-values -f env.yaml --set "deployment.prod=$stagingColor" --set deployment.staging="$productionColor" "$ADDITIONAL_SWITCH_ARGS"
 }
 
