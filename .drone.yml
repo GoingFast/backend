@@ -43,23 +43,23 @@ volumes:
     temp: {}
 
 steps:
-  - name: build-server-app
-    image: golang:alpine
-    commands: ["./ci/scripts/build.sh"]
-    environment:
-      MAIN_DIR: ./server
-    volumes:
-      - name: cache_server
-        path: /drone/src/binary
+  # - name: build-server-app
+  #   image: golang:alpine
+  #   commands: ["./ci/scripts/build.sh"]
+  #   environment:
+  #     MAIN_DIR: ./server
+  #   volumes:
+  #     - name: cache_server
+  #       path: /drone/src/binary
 
-  - name: build-client-app
-    image: golang:alpine
-    commands: ["./ci/scripts/build.sh"]
-    environment:
-      MAIN_DIR: ./server
-    volumes:
-      - name: cache_client
-        path: /drone/src/binary
+  # - name: build-client-app
+  #   image: golang:alpine
+  #   commands: ["./ci/scripts/build.sh"]
+  #   environment:
+  #     MAIN_DIR: ./client
+  #   volumes:
+  #     - name: cache_client
+  #       path: /drone/src/binary
 
   - name: build-client-image
     image: plugins/docker
@@ -74,7 +74,7 @@ steps:
     volumes:
       - name: cache_client
         path: /drone/src/binary
-    depends_on: [build-server-app, build-client-app]
+    # depends_on: [build-server-app, build-client-app]
 
   - name: build-server-image
     image: plugins/docker
@@ -89,7 +89,7 @@ steps:
     volumes:
       - name: cache_server
         path: /drone/src/binary
-    depends_on: [build-server-app, build-client-app]
+    # depends_on: [build-server-app, build-client-app]
 
   - name: deploy
     image: dtzar/helm-kubectl:2.11.0
@@ -104,7 +104,7 @@ steps:
         from_secret: k8s_token
       STAGING: true
       TAG: ${DRONE_COMMIT_SHA:0:8}
-    depends_on: [build-server-app, build-client-app, build-client-image, build-server-image]
+    depends_on: [build-client-image, build-server-image]
 
 depends_on:
   - staging-test
